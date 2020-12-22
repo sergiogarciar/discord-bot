@@ -66,6 +66,16 @@ function limpiarHoras(usuario) {
 
 }
 
+function limpiarHorasTotales() {
+   
+     var db = openDatabase();   
+     db.run(`delete from fichaje`);
+     closeDatabase(db);
+    
+  
+
+}
+
 function updateTime(user, time) {
   var userTime = -1;
   getUserTime(user).then(userTime => {
@@ -147,6 +157,9 @@ module.exports = {
   },
   limpiarHoras: function (usuario){
     limpiarHoras(usuario);
+  },
+  limpiarHorasTotales:function(){
+    limpiarHorasTotales();
   }
 
 };

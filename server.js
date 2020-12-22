@@ -9,14 +9,27 @@ const sqlmanager = require("./sqlmanager.js");
 const Discord = require("discord.js");
 const config = require("./config.json");
 
-var ROBOT = require("uptime-robot");
+
 
 const client = new Discord.Client();
 
 const prefix = "!";
 var workers = new Map();
-
+var esJefe = false;
 client.on("message", function(message) {
+  
+  let rolJefe = message.guild.roles.cache.get("781520694990733362");
+  
+  if(message.member.roles.cache.has(rolJefe.id)){
+    esJefe = true;
+  }
+  else{
+    esJefe = false;
+  }
+
+  if(message.guild.members.cache.get(process.env.ID_BOTMASTER).id === message.member.user.id){
+    esJefe = true;
+  }
   if (message.author.bot) return;
   if (!message.content.startsWith(prefix)) return;
   //message.delete();
@@ -38,6 +51,12 @@ client.on("message", function(message) {
     case "limpiarhoras":
       limpiarHoras(message,args[0]);
     break;
+    case "limpiarhorastodas":
+      limpiarHorasTotales(message);
+    break;
+    //case "clear":
+      //clear(message);
+    //break;
     case "test":
       //test(message,args);
       test2();
@@ -46,6 +65,24 @@ client.on("message", function(message) {
       message.reply("No te he entendido");
   }
 });
+
+function clear(message){
+  if (message.member.hasPermission("MANAGE_MESSAGES")) {
+           var chanel = message.channel;
+           chanel.bulkDelete(100).then(messages => {});                
+        }
+}
+
+function limpiarHorasTotales(message){
+   if (esJefe){
+      sqlmanager.limpiarHorasTotales();
+      message.reply("Se han eliminado todas las horas de todos los trabajadores");
+   }
+   else{
+     message.reply("No tienes permisos para realizar este comando");
+   }
+ 
+}
 function getUserFromMention(mention) {
   if (!mention) return;
 
@@ -84,8 +121,17 @@ function limpiarHoras (message,mention){
     message.reply("No has indicado un usuario");
   }
   else{
-    sqlmanager.limpiarHoras(user.username);
-    message.reply("Horas del usuario introducido borradas");
+  if (esJefe){
+      sqlmanager.limpiarHoras(user.username);
+      message.reply("Horas del usuario introducido borradas");
+   }
+   else{
+     message.reply("No tienes permisos para realizar este comando");
+   }
+
+
+
+    
   }
 }
 function test(message, args) {
