@@ -17,7 +17,7 @@ db.serialize(() => {
   db.serialize(() => {
     // queries will execute in serialized mode
     db.run("CREATE TABLE IF NOT EXISTS FICHAJE(user text, totalHoras NUMBER)");
-   
+
   });
   // queries will execute in serialized mode
 });
@@ -56,6 +56,15 @@ const getUserTime = usuario => {
     closeDatabase(db);
   });
 };
+function limpiarHoras(usuario) {
+   
+     var db = openDatabase();   
+     db.run(`delete from fichaje where user = ?`,usuario);
+     closeDatabase(db);
+    
+  
+
+}
 
 function updateTime(user, time) {
   var userTime = -1;
@@ -135,5 +144,9 @@ module.exports = {
   guardarTiempoUser: function(user, time) {
     console.log("Dentro de sqlmanager: " + time);
     updateTime(user, time);
+  },
+  limpiarHoras: function (usuario){
+    limpiarHoras(usuario);
   }
+
 };

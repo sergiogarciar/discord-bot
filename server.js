@@ -35,6 +35,9 @@ client.on("message", function(message) {
     case "horas":
       horas(message, args[0]);
       break;
+    case "limpiarhoras":
+      limpiarHoras(message,args[0]);
+    break;
     case "test":
       //test(message,args);
       test2();
@@ -75,7 +78,16 @@ function horas(message, mention) {
     
   }
 }
-
+function limpiarHoras (message,mention){
+  var user = getUserFromMention(mention);
+  if (user === undefined) {
+    message.reply("No has indicado un usuario");
+  }
+  else{
+    sqlmanager.limpiarHoras(user.username);
+    message.reply("Horas del usuario introducido borradas");
+  }
+}
 function test(message, args) {
   let mensaje = "Los tipos de los argumentos son: ";
   /*for(var argun in args){
@@ -124,7 +136,7 @@ function secondsToTime(secs) {
   };
   return obj;
 }
-client.login(config.BOT_TOKEN);
+client.login(process.env.BOT_TOKEN);
 
 // our default array of dreams
 const dreams = [
