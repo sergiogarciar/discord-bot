@@ -16,6 +16,10 @@ const client = new Discord.Client();
 const prefix = "!";
 var workers = new Map();
 var esJefe = false;
+client.on('ready', () => {
+  console.log(`Logged in as ${client.user.tag}!`);
+});
+
 client.on("message", function(message) {
   
   let rolJefe = message.guild.roles.cache.get("781520694990733362");
@@ -26,10 +30,7 @@ client.on("message", function(message) {
   else{
     esJefe = false;
   }
-
-  if(message.guild.members.cache.get(process.env.ID_BOTMASTER).id === message.member.user.id){
-    esJefe = true;
-  }
+  
   if (message.author.bot) return;
   if (!message.content.startsWith(prefix)) return;
   //message.delete();
