@@ -17,6 +17,7 @@ db.serialize(() => {
   db.serialize(() => {
     // queries will execute in serialized mode
     db.run("CREATE TABLE IF NOT EXISTS FICHAJE(user text, totalHoras NUMBER)");
+    
     db.run("CREATE TABLE IF NOT EXISTS FICHAJEv2(id INTEGER PRIMARY KEY AUTOINCREMENT,user text, entrada NUMBER,salida NUMBER,mes NUMBER)");
   });
   // queries will execute in serialized mode
@@ -67,7 +68,7 @@ const getUserTimeMesv2 = (usuario,mes) => {
       // queries will execute in serialized mode
 
       db.get(
-        `SELECT sum(salida-entrada) total from fichajev2 where user = ? and mes = ? and salida is not null`,
+        `SELECT sum(salida-entrada) total from FICHAJEv2 where user = ? and mes = ? and salida is not null`,
         [usuario,mes],
         (err, row) => {
           if (err) {
@@ -75,7 +76,7 @@ const getUserTimeMesv2 = (usuario,mes) => {
             reject(err);
             return;
           }
-          console.log("select sum(salida-entrada) total from fichajev2 where user = "+usuario+" and mes = "+mes+" and salida is not null");
+          console.log("select sum(salida-entrada) total from FICHAJEv2 where user = "+usuario+" and mes = "+mes+" and salida is not null");
 
           if (row !== undefined) {
             console.log("row totalhoras " + row.total);
@@ -92,7 +93,7 @@ const getUserTimeMesv2 = (usuario,mes) => {
   });
 };
 
-const getUserUltimaEntradav2 = (usuario,mes) => {
+function getUserUltimaEntradav2(usuario,mes) {
   return new Promise((resolve, reject) => {
     var totalHoras = -1;
 
@@ -103,7 +104,7 @@ const getUserUltimaEntradav2 = (usuario,mes) => {
       // queries will execute in serialized mode
 
       db.get(
-        `SELECT entrada total from fichajev2 where user = ? and mes = ? and salida is not null`,
+        `SELECT entrada total from FICHAJEv2 where user = ? and mes = ? and salida is null`,
         [usuario,mes],
         (err, row) => {
           if (err) {
@@ -111,12 +112,13 @@ const getUserUltimaEntradav2 = (usuario,mes) => {
             reject(err);
             return;
           }
-          console.log("select entrada total from fichajev2 where user = "+usuario+" and mes = "+mes+" and salida is not null");
+          console.log("select entrada total from FICHAJEv2 where user = "+usuario+" and mes = "+mes+" and salida is null");
 
           if (row !== undefined) {
             console.log("row totalhoras " + row.total);
             totalHoras = row.total;
           } else {
+            console.log("row totalhoras -1");
             totalHoras = -1;
           }
           resolve(totalHoras);
@@ -217,6 +219,14 @@ function openDatabase() {
   );
   return db;
 }
+function execDrop(table){
+  let db = openDatabase();
+  db.serialize(() =>{
+    db.run("delete from "+table);
+
+  });
+  closeDatabase(db);
+}
 function closeDatabase(db) {
   db.close(err => {
     if (err) {
@@ -235,7 +245,7 @@ function entrada(user,fecha){
             if (err) {
               return console.error(err.message);
             }
-            console.log("INSERT realizado con valores: " + user + ", " + time);
+            console.log("INSERT realizado con valores: " + user + ", " + fecha);
           }
         );
       });
@@ -243,25 +253,6 @@ function entrada(user,fecha){
 }
 
 function salida(user,fecha){
-  let db = openDatabase();
-  db.serialize(() => {
-        
-        db.run(
-          `UPDATE fichaje SET salida = ? where user = ? and salida is null`,
-          [fecha, user],
-          function(err) {
-            if (err) {
-              return console.error(err.message);
-            }
-            console.log(
-              "UPDATE realizado con valores: " + user + ", " + fecha
-            );
-          }
-        );
-      });
-  closeDatabase(db);
-}
-function salidav2(user,fecha){
   let db = openDatabase();
   db.serialize(() => {
         
@@ -279,6 +270,20 @@ function salidav2(user,fecha){
         );
       });
   closeDatabase(db);
+}
+function estaLoggado(usuario,mes){
+  return getUserUltimaEntradav2(usuario,mes).then(entrada => {
+      if(entrada!= -1){
+        return true;
+      }else{
+        return false;
+      }
+    }
+      
+    ).catch(err => {
+      console.error(err.message);
+            reject(err);
+    });
 }
 module.exports = {
   cargarTiempoUser: function(usuario) {
@@ -300,9 +305,6 @@ module.exports = {
   salida :function(user,fecha){
     salida(user,fecha);
   },
-  salidav2 :function(user,fecha){
-    salidav2(user,fecha);
-  },
   cargarTiempoUserMes: function(usuario,mes){
 	  return getUserTimeMesv2(usuario,mes);
   },
@@ -312,14 +314,13 @@ module.exports = {
   getUserUltimaEntradav2: function(usuario,mes){
     return getUserUltimaEntradav2(usuario,mes);
   },
-  userEstaLoggadov2: function(usuario,mes){
-    getUserUltimaEntradav2(usuario,mes).then(entrada => 
-      if(entrada!== -1){
-        return true;
-      }else{
-        return false;
-      }
-    );
+   userEstaLoggadov2:  function(usuario,mes){
+    
+    return estaLoggado(usuario,mes);
+   
+  },
+  execDrop: function(table){
+    execDrop(table);
   }
 
 };

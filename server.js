@@ -15,21 +15,25 @@ const client = new Discord.Client();
 
 const prefix = "!";
 var workers = new Map();
-var esJefe = false;
+
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
 });
 
 client.on("message", function(message) {
-
+  var esJefe = false;
   let rolJefe = message.guild.roles.cache.get("781520694990733362");
+  if(rolJefe === undefined){
 
-  if (message.member.roles.cache.has(rolJefe.id)) {
+  }else{
+    if (message.member.roles.cache.has(rolJefe.id)) {
     esJefe = true;
   }
   else {
     esJefe = false;
   }
+  }
+  
 
   if (message.author.bot) return;
   if (!message.content.startsWith(prefix)) return;
@@ -37,19 +41,14 @@ client.on("message", function(message) {
   const commandBody = message.content.slice(prefix.length);
   const args = commandBody.split(" ");
   const command = args.shift().toLowerCase();
+  console.log("comando: "+commandBody);
   switch (command) {
     case "entrada":
       entrada(message);
       break;
     case "salida":
       salida(message);
-      break;
-    case "entradav2":
-      entradav2(message);
-      break;
-    case "salidav2":
-      salidav2(message);
-      break;
+      break;   
     case "registrar":
       break;
     case "horas":
@@ -61,12 +60,27 @@ client.on("message", function(message) {
     case "limpiarhorastodas":
       limpiarHorasTotales(message);
       break;
+    //v2
+    case "entradav2":
+      entradav2(message);
+      break;
+    case "salidav2":
+      salidav2(message);
+      break;
+    case "horasv2":
+    
+      horasv2(message, args[0],args[1]);
+      break;
+   
+    case "limpiarhorasv2":
+      
+      break;
     //case "clear":
     //clear(message);
     //break;
     case "test":
       //test(message,args);
-      test2();
+      sqlmanager.execDrop("FICHAJEv2")
       break;
     default:
       message.reply("No te he entendido");
@@ -122,6 +136,27 @@ function horas(message, mention) {
 
   }
 }
+function horasv2(message, mention,mes) {
+  let user = getUserFromMention(mention);
+  console.log("mes " + mes + "Number.isInteger(mes) = "+Number.isInteger(mes));
+  if (user === undefined) {
+    message.reply("No has indicado un usuario");
+  } else {
+    let tiempo = 0;
+    if(mes === undefined){
+      mes = new Date().getMonth()+1;
+    }
+     
+    sqlmanager.cargarTiempoUserMes(user.username,mes).then(tiempo => {
+      console.log("tiempo en server.js " + tiempo);
+      let time = secondsToTime(tiempo / 1000);
+      message.reply(
+        `El usuario consultado lleva un total trabajado de: ${time.h} horas, ${time.m} minutos, ${time.s} segundos`
+      );
+    });
+
+  }
+}
 function limpiarHoras(message, mention) {
   var user = getUserFromMention(mention);
   if (user === undefined) {
@@ -162,13 +197,17 @@ function entradav2(message) {
   let fecha = new Date();
   let nombre = message.author.username;
   let mes = fecha.getMonth()+1;
-  let estaLog = sqlmanager.userEstaLoggadov2(nombre,mes);
+  sqlmanager.userEstaLoggadov2(nombre,mes).then(estaLog => {
+    console.log("estaLog= "+estaLog)
   if (!estaLog) {
     sqlmanager.entrada(nombre,Date.now());
     message.reply(`Has fichado correctamente`);
   } else {
     message.reply("Ya te encuentras en el sistema");
   }
+
+  });
+  
 }
 function salida(message) {
   if (workers.get(message.author) !== undefined) {
@@ -185,18 +224,30 @@ function salida(message) {
   }
 }
 function salidav2(message) {
-  if (workers.get(message.author) !== undefined) {
-    var fechaIni = workers.get(message.author);
-    var totalTime = Date.now() - fechaIni;
-    var time = secondsToTime(totalTime / 1000);
-    workers.delete(message.author);
-    message.reply(
-      `Total trabajado ${time.h} horas, ${time.m} minutos, ${time.s} segundos`
-    );
-    sqlmanager.guardarTiempoUser(message.author.username, totalTime);
+  let fecha = new Date();
+  let nombre = message.author.username;
+  let mes = fecha.getMonth()+1;
+  
+  sqlmanager.userEstaLoggadov2(nombre,mes).then(estaLog =>{
+    console.log("estaLog= "+estaLog)
+    if (estaLog) {
+    sqlmanager.getUserUltimaEntradav2(nombre,mes).then(fechaIni =>{
+      let totalTime = Date.now() - fechaIni;
+      let time = secondsToTime(totalTime / 1000);
+      sqlmanager.salida(nombre,Date.now());
+      message.reply(
+        `Total trabajado ${time.h} horas, ${time.m} minutos, ${time.s} segundos`
+      );
+  });
+  
+   
+   
   } else {
     message.reply("No te encuentras en el sistema");
   }
+  });
+  
+  
 }
 function secondsToTime(secs) {
   secs = Math.round(secs);
