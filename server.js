@@ -21,16 +21,16 @@ client.on('ready', () => {
 });
 
 client.on("message", function(message) {
-  
+
   let rolJefe = message.guild.roles.cache.get("781520694990733362");
-  
-  if(message.member.roles.cache.has(rolJefe.id)){
+
+  if (message.member.roles.cache.has(rolJefe.id)) {
     esJefe = true;
   }
-  else{
+  else {
     esJefe = false;
   }
-  
+
   if (message.author.bot) return;
   if (!message.content.startsWith(prefix)) return;
   //message.delete();
@@ -44,19 +44,25 @@ client.on("message", function(message) {
     case "salida":
       salida(message);
       break;
+    case "entradav2":
+      entradav2(message);
+      break;
+    case "salidav2":
+      salidav2(message);
+      break;
     case "registrar":
       break;
     case "horas":
       horas(message, args[0]);
       break;
     case "limpiarhoras":
-      limpiarHoras(message,args[0]);
-    break;
+      limpiarHoras(message, args[0]);
+      break;
     case "limpiarhorastodas":
       limpiarHorasTotales(message);
-    break;
+      break;
     //case "clear":
-      //clear(message);
+    //clear(message);
     //break;
     case "test":
       //test(message,args);
@@ -67,22 +73,22 @@ client.on("message", function(message) {
   }
 });
 
-function clear(message){
+function clear(message) {
   if (message.member.hasPermission("MANAGE_MESSAGES")) {
-           var chanel = message.channel;
-           chanel.bulkDelete(100).then(messages => {});                
-        }
+    var chanel = message.channel;
+    chanel.bulkDelete(100).then(messages => { });
+  }
 }
 
-function limpiarHorasTotales(message){
-   if (esJefe){
-      sqlmanager.limpiarHorasTotales();
-      message.reply("Se han eliminado todas las horas de todos los trabajadores");
-   }
-   else{
-     message.reply("No tienes permisos para realizar este comando");
-   }
- 
+function limpiarHorasTotales(message) {
+  if (esJefe) {
+    sqlmanager.limpiarHorasTotales();
+    message.reply("Se han eliminado todas las horas de todos los trabajadores");
+  }
+  else {
+    message.reply("No tienes permisos para realizar este comando");
+  }
+
 }
 function getUserFromMention(mention) {
   if (!mention) return;
@@ -101,38 +107,38 @@ function test2() {
   sqlmanager.cargarTiempoUser("kekotalaverano");
 }
 function horas(message, mention) {
-  var user = getUserFromMention(mention);
+  let user = getUserFromMention(mention);
   if (user === undefined) {
     message.reply("No has indicado un usuario");
   } else {
-    var tiempo = 0;
-   sqlmanager.cargarTiempoUser(user.username).then(tiempo =>{
-   console.log("tiempo en server.js " + tiempo);
-    var time = secondsToTime(tiempo/1000);
-    message.reply(
-      `El usuario consultado lleva un total trabajado de: ${time.h} horas, ${time.m} minutos, ${time.s} segundos`
+    let tiempo = 0;
+    sqlmanager.cargarTiempoUser(user.username).then(tiempo => {
+      console.log("tiempo en server.js " + tiempo);
+      let time = secondsToTime(tiempo / 1000);
+      message.reply(
+        `El usuario consultado lleva un total trabajado de: ${time.h} horas, ${time.m} minutos, ${time.s} segundos`
       );
-   });                                         
-    
+    });
+
   }
 }
-function limpiarHoras (message,mention){
+function limpiarHoras(message, mention) {
   var user = getUserFromMention(mention);
   if (user === undefined) {
     message.reply("No has indicado un usuario");
   }
-  else{
-  if (esJefe){
+  else {
+    if (esJefe) {
       sqlmanager.limpiarHoras(user.username);
       message.reply("Horas del usuario introducido borradas");
-   }
-   else{
-     message.reply("No tienes permisos para realizar este comando");
-   }
+    }
+    else {
+      message.reply("No tienes permisos para realizar este comando");
+    }
 
 
 
-    
+
   }
 }
 function test(message, args) {
@@ -144,7 +150,7 @@ function test(message, args) {
   message.reply(mensaje + Object.prototype.toString.call(user));
 }
 function entrada(message) {
-  const fecha = Date.now();
+  let fecha = Date.now();
   if (workers.get(message.author) === undefined) {
     workers.set(message.author, fecha);
     message.reply(`Has fichado correctamente`);
@@ -152,7 +158,33 @@ function entrada(message) {
     message.reply("Ya te encuentras en el sistema");
   }
 }
+function entradav2(message) {
+  let fecha = new Date();
+  let nombre = message.author.username;
+  let mes = fecha.getMonth()+1;
+  let estaLog = sqlmanager.userEstaLoggadov2(nombre,mes);
+  if (!estaLog) {
+    sqlmanager.entrada(nombre,Date.now());
+    message.reply(`Has fichado correctamente`);
+  } else {
+    message.reply("Ya te encuentras en el sistema");
+  }
+}
 function salida(message) {
+  if (workers.get(message.author) !== undefined) {
+    var fechaIni = workers.get(message.author);
+    var totalTime = Date.now() - fechaIni;
+    var time = secondsToTime(totalTime / 1000);
+    workers.delete(message.author);
+    message.reply(
+      `Total trabajado ${time.h} horas, ${time.m} minutos, ${time.s} segundos`
+    );
+    sqlmanager.guardarTiempoUser(message.author.username, totalTime);
+  } else {
+    message.reply("No te encuentras en el sistema");
+  }
+}
+function salidav2(message) {
   if (workers.get(message.author) !== undefined) {
     var fechaIni = workers.get(message.author);
     var totalTime = Date.now() - fechaIni;

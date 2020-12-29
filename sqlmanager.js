@@ -17,7 +17,7 @@ db.serialize(() => {
   db.serialize(() => {
     // queries will execute in serialized mode
     db.run("CREATE TABLE IF NOT EXISTS FICHAJE(user text, totalHoras NUMBER)");
-    db.run("CREATE TABLE IF NOT EXISTS FICHAJEv2(id INTEGER PRIMARY KEY AUTOINCREMENT,user text, entrada NUMBER,salida NUMBER,mes NUMBER,anio NUMBER,semana NUMBER)");
+    db.run("CREATE TABLE IF NOT EXISTS FICHAJEv2(id INTEGER PRIMARY KEY AUTOINCREMENT,user text, entrada NUMBER,salida NUMBER,mes NUMBER)");
   });
   // queries will execute in serialized mode
 });
@@ -56,6 +56,77 @@ const getUserTime = usuario => {
     closeDatabase(db);
   });
 };
+const getUserTimeMesv2 = (usuario,mes) => {
+  return new Promise((resolve, reject) => {
+    var totalHoras = -1;
+
+    var db = openDatabase();
+
+    // queries will execute in serialized mode
+    db.serialize(() => {
+      // queries will execute in serialized mode
+
+      db.get(
+        `SELECT sum(salida-entrada) total from fichajev2 where user = ? and mes = ? and salida is not null`,
+        [usuario,mes],
+        (err, row) => {
+          if (err) {
+            console.error(err.message);
+            reject(err);
+            return;
+          }
+          console.log("select sum(salida-entrada) total from fichajev2 where user = "+usuario+" and mes = "+mes+" and salida is not null");
+
+          if (row !== undefined) {
+            console.log("row totalhoras " + row.total);
+            totalHoras = row.total;
+          } else {
+            totalHoras = -1;
+          }
+          resolve(totalHoras);
+        }
+      );
+    });
+
+    closeDatabase(db);
+  });
+};
+
+const getUserUltimaEntradav2 = (usuario,mes) => {
+  return new Promise((resolve, reject) => {
+    var totalHoras = -1;
+
+    var db = openDatabase();
+
+    // queries will execute in serialized mode
+    db.serialize(() => {
+      // queries will execute in serialized mode
+
+      db.get(
+        `SELECT entrada total from fichajev2 where user = ? and mes = ? and salida is not null`,
+        [usuario,mes],
+        (err, row) => {
+          if (err) {
+            console.error(err.message);
+            reject(err);
+            return;
+          }
+          console.log("select entrada total from fichajev2 where user = "+usuario+" and mes = "+mes+" and salida is not null");
+
+          if (row !== undefined) {
+            console.log("row totalhoras " + row.total);
+            totalHoras = row.total;
+          } else {
+            totalHoras = -1;
+          }
+          resolve(totalHoras);
+        }
+      );
+    });
+
+    closeDatabase(db);
+  });
+};
 function limpiarHoras(usuario) {
 
   var db = openDatabase();
@@ -65,7 +136,15 @@ function limpiarHoras(usuario) {
 
 
 }
+function limpiarHorasMes(usuario,mes) {
 
+  var db = openDatabase();
+  db.run(`delete from fichajev2 where user = ? and mes=?`, usuario,mes);
+  closeDatabase(db);
+
+
+
+}
 function limpiarHorasTotales() {
 
   var db = openDatabase();
@@ -150,7 +229,7 @@ function entrada(user,fecha){
   let db = openDatabase();
   db.serialize(() => {
         db.run(
-          `INSERT INTO fichajev2 (user,entrada) values (?,?)`,
+          `INSERT INTO fichajev2 (user,entrada,mes) values (?,?,strftime('%m','now'))`,
           [user, fecha],
           function(err) {
             if (err) {
@@ -169,6 +248,25 @@ function salida(user,fecha){
         
         db.run(
           `UPDATE fichaje SET salida = ? where user = ? and salida is null`,
+          [fecha, user],
+          function(err) {
+            if (err) {
+              return console.error(err.message);
+            }
+            console.log(
+              "UPDATE realizado con valores: " + user + ", " + fecha
+            );
+          }
+        );
+      });
+  closeDatabase(db);
+}
+function salidav2(user,fecha){
+  let db = openDatabase();
+  db.serialize(() => {
+        
+        db.run(
+          `UPDATE fichajev2 SET salida = ? where user = ? and salida is null`,
           [fecha, user],
           function(err) {
             if (err) {
@@ -201,6 +299,27 @@ module.exports = {
   },
   salida :function(user,fecha){
     salida(user,fecha);
+  },
+  salidav2 :function(user,fecha){
+    salidav2(user,fecha);
+  },
+  cargarTiempoUserMes: function(usuario,mes){
+	  return getUserTimeMesv2(usuario,mes);
+  },
+  limpiarHorasMes : function(usuario,mes){
+    limpiarHorasMes(usuario,mes);
+  },
+  getUserUltimaEntradav2: function(usuario,mes){
+    return getUserUltimaEntradav2(usuario,mes);
+  },
+  userEstaLoggadov2: function(usuario,mes){
+    getUserUltimaEntradav2(usuario,mes).then(entrada => 
+      if(entrada!== -1){
+        return true;
+      }else{
+        return false;
+      }
+    );
   }
 
 };
