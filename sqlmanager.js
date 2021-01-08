@@ -18,7 +18,7 @@ db.serialize(() => {
     // queries will execute in serialized mode
     db.run("CREATE TABLE IF NOT EXISTS FICHAJE(user text, totalHoras NUMBER)");
     
-    db.run("CREATE TABLE IF NOT EXISTS FICHAJEv2(id INTEGER PRIMARY KEY AUTOINCREMENT,user text, entrada NUMBER,salida NUMBER,mes NUMBER)");
+    db.run("CREATE TABLE IF NOT EXISTS FICHAJEv2(id INTEGER PRIMARY KEY AUTOINCREMENT,user text, entrada NUMBER,salida NUMBER,mes NUMBER,semana NUMBER)");
   });
   // queries will execute in serialized mode
 });
@@ -77,6 +77,42 @@ const getUserTimeMesv2 = (usuario,mes) => {
             return;
           }
           console.log("select sum(salida-entrada) total from FICHAJEv2 where user = "+usuario+" and mes = "+mes+" and salida is not null");
+
+          if (row !== undefined) {
+            console.log("row totalhoras " + row.total);
+            totalHoras = row.total;
+          } else {
+            totalHoras = -1;
+          }
+          resolve(totalHoras);
+        }
+      );
+    });
+
+    closeDatabase(db);
+  });
+};
+
+const getUserTimeSemanav2 = (usuario,semana) => {
+  return new Promise((resolve, reject) => {
+    var totalHoras = -1;
+
+    var db = openDatabase();
+
+    // queries will execute in serialized mode
+    db.serialize(() => {
+      // queries will execute in serialized mode
+
+      db.get(
+        `SELECT sum(salida-entrada) total from FICHAJEv2 where user = ? and semana = ? and salida is not null`,
+        [usuario,semana],
+        (err, row) => {
+          if (err) {
+            console.error(err.message);
+            reject(err);
+            return;
+          }
+          console.log("select sum(salida-entrada) total from FICHAJEv2 where user = "+usuario+" and semana = "+semana+" and salida is not null");
 
           if (row !== undefined) {
             console.log("row totalhoras " + row.total);
@@ -222,8 +258,9 @@ function openDatabase() {
 function execDrop(table){
   let db = openDatabase();
   db.serialize(() =>{
-    db.run("delete from "+table);
-
+    db.run("DROP TABLE "+table);
+    console.log("DROP TABLE "+table);
+    db.run("CREATE TABLE FICHAJEv2(id INTEGER PRIMARY KEY AUTOINCREMENT,user text, entrada NUMBER,salida NUMBER,mes NUMBER,semana NUMBER)");
   });
   closeDatabase(db);
 }
@@ -235,12 +272,12 @@ function closeDatabase(db) {
     console.log("Close the database connection.");
   });
 }
-function entrada(user,fecha){
+function entrada(user,fecha,semana){
   let db = openDatabase();
   db.serialize(() => {
         db.run(
-          `INSERT INTO fichajev2 (user,entrada,mes) values (?,?,strftime('%m','now'))`,
-          [user, fecha],
+          `INSERT INTO fichajev2 (user,entrada,mes,semana) values (?,?,strftime('%m','now'),?)`,
+          [user, fecha,semana],
           function(err) {
             if (err) {
               return console.error(err.message);
@@ -299,14 +336,17 @@ module.exports = {
   limpiarHorasTotales: function() {
     limpiarHorasTotales();
   },
-  entrada:function (user,fecha){
-    entrada(user,fecha);
+  entrada:function (user,fecha,semana){
+    entrada(user,fecha,semana);
   },
   salida :function(user,fecha){
     salida(user,fecha);
   },
   cargarTiempoUserMes: function(usuario,mes){
 	  return getUserTimeMesv2(usuario,mes);
+  },
+  cargarTiempoUserSemana: function(usuario,semana){
+	  return getUserTimeSemanav2(usuario,semana);
   },
   limpiarHorasMes : function(usuario,mes){
     limpiarHorasMes(usuario,mes);

@@ -8,7 +8,7 @@ const app = express();
 const sqlmanager = require("./sqlmanager.js");
 const Discord = require("discord.js");
 const config = require("./config.json");
-
+const Weeknumber = require("weeknumber");
 
 
 const client = new Discord.Client();
@@ -24,14 +24,15 @@ client.on("message", function(message) {
   var esJefe = false;
   let rolJefe = message.guild.roles.cache.get("781520694990733362");
   if(rolJefe === undefined){
-
-  }else{
-    if (message.member.roles.cache.has(rolJefe.id)) {
     esJefe = true;
   }
-  else {
-    esJefe = false;
-  }
+  else{
+    if (message.member.roles.cache.has(rolJefe.id)) {
+      esJefe = true;
+    }
+    else {
+      esJefe = false;
+    }
   }
   
 
@@ -43,37 +44,41 @@ client.on("message", function(message) {
   const command = args.shift().toLowerCase();
   console.log("comando: "+commandBody);
   switch (command) {
-    case "entrada":
+    case "entrada_old":
       entrada(message);
       break;
-    case "salida":
+    case "salida_old":
       salida(message);
       break;   
-    case "registrar":
+    case "registrar_old":
       break;
-    case "horas":
+    case "horas_old":
       horas(message, args[0]);
       break;
-    case "limpiarhoras":
+    case "limpiarhoras_old":
       limpiarHoras(message, args[0]);
       break;
-    case "limpiarhorastodas":
+    case "limpiarhorastodas_old":
       limpiarHorasTotales(message);
       break;
     //v2
-    case "entradav2":
+    case "entrada":
       entradav2(message);
       break;
-    case "salidav2":
+    case "salida":
       salidav2(message);
       break;
-    case "horasv2":
-    
+    case "horas":    
       horasv2(message, args[0],args[1]);
       break;
-   
+    case "horassemana":
+      horassemana(message, args[0],args[1]);
+      break;
     case "limpiarhorasv2":
       
+      break;
+    case "limpiarhorastodasv2":
+
       break;
     //case "clear":
     //clear(message);
@@ -157,6 +162,29 @@ function horasv2(message, mention,mes) {
 
   }
 }
+function horassemana(message, mention,semana) {
+  let user = getUserFromMention(mention);
+  var fechaHoy = new Date();
+  
+  if (user === undefined) {
+    message.reply("No has indicado un usuario");
+  } else {
+    let tiempo = 0;
+    
+    if(semana=== undefined){
+      semana = Weeknumber.weekNumber(fechaHoy);
+    }
+    console.log("semana " + semana); 
+    sqlmanager.cargarTiempoUserSemana(user.username,semana).then(tiempo => {
+      console.log("tiempo en server.js " + tiempo);
+      let time = secondsToTime(tiempo / 1000);
+      message.reply(
+        `El usuario consultado lleva un total trabajado de: ${time.h} horas, ${time.m} minutos, ${time.s} segundos durante la semana ${semana} del año`
+      );
+    });
+
+  }
+}
 function limpiarHoras(message, mention) {
   var user = getUserFromMention(mention);
   if (user === undefined) {
@@ -195,12 +223,13 @@ function entrada(message) {
 }
 function entradav2(message) {
   let fecha = new Date();
+  let semana = Weeknumber.weekNumber(fecha);
   let nombre = message.author.username;
   let mes = fecha.getMonth()+1;
   sqlmanager.userEstaLoggadov2(nombre,mes).then(estaLog => {
     console.log("estaLog= "+estaLog)
   if (!estaLog) {
-    sqlmanager.entrada(nombre,Date.now());
+    sqlmanager.entrada(nombre,Date.now(),semana);
     message.reply(`Has fichado correctamente`);
   } else {
     message.reply("Ya te encuentras en el sistema");
